@@ -1,0 +1,19 @@
+[package]
+authors = ["Aramis Razzaghipour <aramisnoah@gmail.com>"]
+description = "Create themes for VS Code with ease"
+documentation = "https://docs.rs/mottle"
+edition = "2018"
+homepage = "https://github.com/arzg/mottle"
+license = "MIT OR Apache-2.0"
+name = "mottle"
+repository = "https://github.com/arzg/mottle"
+version = "0.1.0"
+
+[dependencies]
+serde = "1.0.118"
+tincture = "0.5.0"
+
+[dependencies.json]
+features = ["preserve_order"]
+package = "serde_json"
+version = "1.0.61"
