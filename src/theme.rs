@@ -2,6 +2,10 @@ mod builder;
 pub use builder::{Scope, ThemeBuilder};
 
 use crate::style::{Color, Style};
+use json::ser::PrettyFormatter;
+use json::Serializer;
+use serde::Serialize;
+use std::{fs, io};
 
 pub struct Theme {
     name: String,
@@ -9,6 +13,35 @@ pub struct Theme {
     workspace_rules: Vec<WorkspaceRule>,
     semantic_rules: Vec<Rule>,
     textmate_rules: Vec<Rule>,
+}
+
+impl Theme {
+    pub fn save(self) -> io::Result<()> {
+        self.save_with_indent("\t")
+    }
+
+    pub fn save_with_indent(self, indent: &str) -> io::Result<()> {
+        let path = format!("themes/{}-color-theme.json", self.name);
+        let json: json::Value = self.into();
+
+        let serialized_json = {
+            let mut buf = "// Do not edit directly; this file is generated.\n"
+                .as_bytes()
+                .to_vec();
+
+            let pretty_formatter = PrettyFormatter::with_indent(indent.as_bytes());
+            let mut serializer = Serializer::with_formatter(&mut buf, pretty_formatter);
+
+            json.serialize(&mut serializer).unwrap();
+            buf.push(b'\n');
+
+            buf
+        };
+
+        fs::write(path, serialized_json)?;
+
+        Ok(())
+    }
 }
 
 impl From<Theme> for json::Value {
