@@ -91,6 +91,24 @@ pub struct Color {
     pub alpha: Option<u8>,
 }
 
+impl From<Oklab> for Color {
+    fn from(oklab: Oklab) -> Self {
+        Self {
+            hex: oklab_to_hex(oklab),
+            alpha: None,
+        }
+    }
+}
+
+impl From<(Oklab, u8)> for Color {
+    fn from((oklab, alpha): (Oklab, u8)) -> Self {
+        Self {
+            hex: oklab_to_hex(oklab),
+            alpha: Some(alpha),
+        }
+    }
+}
+
 impl From<Oklch> for Color {
     fn from(oklch: Oklch) -> Self {
         Self {
@@ -121,11 +139,15 @@ impl From<Color> for json::Value {
     }
 }
 
-fn oklch_to_hex(oklch: Oklch) -> u32 {
-    let oklab = Oklab::from(oklch);
+fn oklab_to_hex(oklab: Oklab) -> u32 {
     let linear_rgb: LinearRgb = tincture::convert(oklab);
     let srgb = Srgb::from(linear_rgb);
     assert!(srgb.in_bounds());
 
     srgb.hex()
+}
+
+fn oklch_to_hex(oklch: Oklch) -> u32 {
+    let oklab = Oklab::from(oklch);
+    oklab_to_hex(oklab)
 }
