@@ -52,10 +52,18 @@ impl ThemeBuilder {
     }
 
     pub fn add_workspace_rule(&mut self, scope: &str, color: impl Into<Color>) {
-        self.workspace_rules.push(WorkspaceRule {
-            scope_name: scope.to_string(),
-            color: color.into(),
-        });
+        self.add_workspace_rules(&[scope], color)
+    }
+
+    pub fn add_workspace_rules(&mut self, scopes: &[&str], color: impl Into<Color>) {
+        let color = color.into();
+
+        for scope in scopes {
+            self.workspace_rules.push(WorkspaceRule {
+                scope_name: scope.to_string(),
+                color,
+            });
+        }
     }
 }
 
