@@ -50,15 +50,21 @@ impl Style {
 
                 map.insert("fontStyle".to_string(), font_style);
             } else {
-                let (key, value) = match self.font_style {
-                    Some(FontStyle::Bold) => ("bold", json::Value::Bool(true)),
-                    Some(FontStyle::Italic) => ("italic", json::Value::Bool(true)),
-                    Some(FontStyle::Underline) => ("underline", json::Value::Bool(true)),
+                let key_value_pairs = match self.font_style {
+                    Some(FontStyle::Bold) => vec![("bold", json::Value::Bool(true))],
+                    Some(FontStyle::Italic) => vec![("italic", json::Value::Bool(true))],
+                    Some(FontStyle::BoldItalic) => vec![
+                        ("bold", json::Value::Bool(true)),
+                        ("italic", json::Value::Bool(true)),
+                    ],
+                    Some(FontStyle::Underline) => vec![("underline", json::Value::Bool(true))],
                     Some(FontStyle::Inherit) => unreachable!(),
-                    None => ("fontStyle", json::Value::String(String::new())),
+                    None => vec![("fontStyle", json::Value::String(String::new()))],
                 };
 
-                map.insert(key.to_string(), value);
+                for (key, value) in key_value_pairs {
+                    map.insert(key.to_string(), value);
+                }
             }
         }
 
@@ -70,6 +76,7 @@ impl Style {
 pub enum FontStyle {
     Bold,
     Italic,
+    BoldItalic,
     Underline,
     Inherit,
 }
@@ -79,6 +86,7 @@ impl From<FontStyle> for json::Value {
         match font_style {
             FontStyle::Bold => Self::String("bold".to_string()),
             FontStyle::Italic => Self::String("italic".to_string()),
+            FontStyle::BoldItalic => Self::String("bold italic".to_string()),
             FontStyle::Underline => Self::String("underline".to_string()),
             FontStyle::Inherit => Self::String(String::new()),
         }
