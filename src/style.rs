@@ -34,18 +34,18 @@ impl<C: Into<Color>> From<(C, FontStyle)> for Style {
 }
 
 impl Style {
-    pub fn as_json_value(&self, in_textmate_rule: bool) -> json::Value {
+    pub(crate) fn as_json_value(&self, in_textmate_rule: bool) -> json::Value {
         let mut map = json::Map::new();
 
         if let Some(ref color) = self.color {
-            map.insert("foreground".to_string(), (*color).into());
+            map.insert("foreground".to_string(), color.into_json_value());
         }
 
         if self.font_style != Some(FontStyle::Inherit) {
             if in_textmate_rule {
                 let font_style = self.font_style.map_or_else(
                     || json::Value::String(String::new()),
-                    |font_style| font_style.into(),
+                    FontStyle::into_json_value,
                 );
 
                 map.insert("fontStyle".to_string(), font_style);
@@ -81,14 +81,14 @@ pub enum FontStyle {
     Inherit,
 }
 
-impl From<FontStyle> for json::Value {
-    fn from(font_style: FontStyle) -> Self {
-        match font_style {
-            FontStyle::Bold => Self::String("bold".to_string()),
-            FontStyle::Italic => Self::String("italic".to_string()),
-            FontStyle::BoldItalic => Self::String("bold italic".to_string()),
-            FontStyle::Underline => Self::String("underline".to_string()),
-            FontStyle::Inherit => Self::String(String::new()),
+impl FontStyle {
+    fn into_json_value(self) -> json::Value {
+        match self {
+            FontStyle::Bold => json::Value::String("bold".to_string()),
+            FontStyle::Italic => json::Value::String("italic".to_string()),
+            FontStyle::BoldItalic => json::Value::String("bold italic".to_string()),
+            FontStyle::Underline => json::Value::String("underline".to_string()),
+            FontStyle::Inherit => json::Value::String(String::new()),
         }
     }
 }
@@ -135,15 +135,15 @@ impl From<(Oklch, u8)> for Color {
     }
 }
 
-impl From<Color> for json::Value {
-    fn from(color: Color) -> Self {
-        let hex = if let Some(alpha) = color.alpha {
-            format!("#{:06X}{:02X}", color.hex, alpha)
+impl Color {
+    pub(crate) fn into_json_value(self) -> json::Value {
+        let hex = if let Some(alpha) = self.alpha {
+            format!("#{:06X}{:02X}", self.hex, alpha)
         } else {
-            format!("#{:06X}", color.hex)
+            format!("#{:06X}", self.hex)
         };
 
-        Self::String(hex)
+        json::Value::String(hex)
     }
 }
 

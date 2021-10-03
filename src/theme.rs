@@ -44,14 +44,14 @@ impl Theme {
         let mut map = json::Map::new();
 
         map.insert("name".to_string(), json::Value::String(self.name));
-        map.insert("type".to_string(), self.ty.into());
+        map.insert("type".to_string(), self.ty.into_json_value());
 
         map.insert(
             "colors".to_string(),
             json::Value::Object(
                 self.workspace_rules
                     .into_iter()
-                    .map(|rule| (rule.scope_name, rule.color.into()))
+                    .map(|rule| (rule.scope_name, rule.color.into_json_value()))
                     .collect(),
             ),
         );
@@ -84,11 +84,11 @@ pub enum Type {
     Dark,
 }
 
-impl From<Type> for json::Value {
-    fn from(ty: Type) -> Self {
-        match ty {
-            Type::Light => Self::String("light".to_string()),
-            Type::Dark => Self::String("dark".to_string()),
+impl Type {
+    fn into_json_value(self) -> json::Value {
+        match self {
+            Type::Light => json::Value::String("light".to_string()),
+            Type::Dark => json::Value::String("dark".to_string()),
         }
     }
 }
