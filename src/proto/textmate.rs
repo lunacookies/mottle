@@ -18,11 +18,7 @@ pub struct RuleSettings {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum FontStyle {
     Inherit,
-    Set {
-        bold: bool,
-        italic: bool,
-        underline: bool,
-    },
+    Set { bold: bool, italic: bool, underline: bool },
 }
 
 impl Serialize for RuleSettings {
@@ -37,11 +33,7 @@ impl Serialize for RuleSettings {
                 strukt.end()
             }
 
-            FontStyle::Set {
-                bold,
-                italic,
-                underline,
-            } => {
+            FontStyle::Set { bold, italic, underline } => {
                 let mut strukt = serializer.serialize_struct("Settings", 2)?;
 
                 strukt.serialize_field("foreground", &self.foreground)?;

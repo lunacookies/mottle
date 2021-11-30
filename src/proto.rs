@@ -26,9 +26,7 @@ impl Serialize for Color {
     where
         S: serde::Serializer,
     {
-        serializer.collect_str(&format_args!(
-            "#{:02X}{:02X}{:02X}{:02X}",
-            self.r, self.g, self.b, self.a
-        ))
+        serializer
+            .collect_str(&format_args!("#{:02X}{:02X}{:02X}{:02X}", self.r, self.g, self.b, self.a))
     }
 }
