@@ -9,7 +9,7 @@ use thiserror::Error;
 
 pub fn format_theme(theme: &proto::Theme) -> String {
     let mut v = Vec::new();
-    let mut serializer = Serializer::with_formatter(&mut v, PrettyFormatter::with_indent(b"\t"));
+    let mut serializer = Serializer::with_formatter(&mut v, PrettyFormatter::with_indent(b"    "));
     theme.serialize(&mut serializer).unwrap();
 
     String::from_utf8(v).unwrap()
