@@ -1,3 +1,4 @@
+pub mod dsl;
 pub mod proto;
 
 use serde::Serialize;
