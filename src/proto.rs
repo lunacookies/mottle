@@ -13,7 +13,7 @@ pub struct Theme {
     pub semantic_highlighting: semantic::Highlighting,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Color {
     pub r: u8,
     pub g: u8,
@@ -86,7 +86,7 @@ mod tests {
                 textmate_rules: vec![textmate::Rule {
                     scope: vec!["entity.function.name".to_string()],
                     settings: textmate::RuleSettings {
-                        foreground: Color { r: 156, g: 219, b: 222, a: 255 },
+                        foreground: Some(Color { r: 156, g: 219, b: 222, a: 255 }),
                         font_style: textmate::FontStyle::Inherit,
                     },
                 }],
@@ -119,7 +119,7 @@ mod tests {
                 textmate_rules: vec![textmate::Rule {
                     scope: vec!["storage".to_string()],
                     settings: textmate::RuleSettings {
-                        foreground: Color { r: 0, g: 0, b: 0, a: 255 },
+                        foreground: Some(Color { r: 0, g: 0, b: 0, a: 255 }),
                         font_style: textmate::FontStyle::Set {
                             bold: true,
                             italic: true,
@@ -160,8 +160,8 @@ mod tests {
                 language: None,
             },
             semantic::Style {
-                foreground: Color { r: 255, g: 0, b: 0, a: 255 },
                 font_styles: semantic::FontStyle {
+                foreground: Some(Color { r: 255, g: 0, b: 0, a: 255 }),
                     bold: semantic::FontStyleSetting::True,
                     italic: semantic::FontStyleSetting::Inherit,
                     underline: semantic::FontStyleSetting::Inherit,
@@ -176,8 +176,8 @@ mod tests {
                 language: Some("rust".to_string()),
             },
             semantic::Style {
-                foreground: Color { r: 224, g: 224, b: 201, a: 255 },
                 font_styles: semantic::FontStyle {
+                foreground: Some(Color { r: 224, g: 224, b: 201, a: 255 }),
                     bold: semantic::FontStyleSetting::Inherit,
                     italic: semantic::FontStyleSetting::Inherit,
                     underline: semantic::FontStyleSetting::Inherit,
@@ -192,8 +192,8 @@ mod tests {
                 language: None,
             },
             semantic::Style {
-                foreground: Color { r: 156, g: 219, b: 222, a: 255 },
                 font_styles: semantic::FontStyle {
+                foreground: Some(Color { r: 156, g: 219, b: 222, a: 255 }),
                     bold: semantic::FontStyleSetting::Inherit,
                     italic: semantic::FontStyleSetting::Inherit,
                     underline: semantic::FontStyleSetting::Inherit,

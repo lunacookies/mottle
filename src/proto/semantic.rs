@@ -16,10 +16,10 @@ pub struct Selector {
     pub language: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Style {
-    pub foreground: Color,
     pub font_styles: FontStyle,
+    pub foreground: Option<Color>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]

@@ -1,7 +1,7 @@
 [package]
 description = "Create themes for VS Code with ease"
 documentation = "https://docs.rs/mottle"
-edition = "2018"
+edition = "2021"
 homepage = "https://github.com/arzg/mottle"
 license = "MIT OR Apache-2.0"
 name = "mottle"

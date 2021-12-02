@@ -9,9 +9,9 @@ pub struct Rule {
     pub settings: RuleSettings,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct RuleSettings {
-    pub foreground: Color,
+    pub foreground: Option<Color>,
     pub font_style: FontStyle,
 }
 
