@@ -160,8 +160,8 @@ mod tests {
                 language: None,
             },
             semantic::Style {
-                font_styles: semantic::FontStyle {
                 foreground: Some(Color { r: 255, g: 0, b: 0, a: 255 }),
+                font_style: semantic::FontStyle {
                     bold: semantic::FontStyleSetting::True,
                     italic: semantic::FontStyleSetting::Inherit,
                     underline: semantic::FontStyleSetting::Inherit,
@@ -176,8 +176,8 @@ mod tests {
                 language: Some("rust".to_string()),
             },
             semantic::Style {
-                font_styles: semantic::FontStyle {
                 foreground: Some(Color { r: 224, g: 224, b: 201, a: 255 }),
+                font_style: semantic::FontStyle {
                     bold: semantic::FontStyleSetting::Inherit,
                     italic: semantic::FontStyleSetting::Inherit,
                     underline: semantic::FontStyleSetting::Inherit,
@@ -192,8 +192,8 @@ mod tests {
                 language: None,
             },
             semantic::Style {
-                font_styles: semantic::FontStyle {
                 foreground: Some(Color { r: 156, g: 219, b: 222, a: 255 }),
+                font_style: semantic::FontStyle {
                     bold: semantic::FontStyleSetting::Inherit,
                     italic: semantic::FontStyleSetting::Inherit,
                     underline: semantic::FontStyleSetting::Inherit,

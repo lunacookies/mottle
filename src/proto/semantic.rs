@@ -18,8 +18,8 @@ pub struct Selector {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Style {
-    pub font_styles: FontStyle,
     pub foreground: Option<Color>,
+    pub font_style: FontStyle,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -98,19 +98,19 @@ impl Serialize for Style {
         let mut strukt = serializer.serialize_struct("Style", 1)?;
         strukt.serialize_field("foreground", &self.foreground)?;
 
-        match self.font_styles.bold {
+        match self.font_style.bold {
             FontStyleSetting::True => strukt.serialize_field("bold", &true)?,
             FontStyleSetting::False => strukt.serialize_field("bold", &false)?,
             FontStyleSetting::Inherit => {}
         }
 
-        match self.font_styles.italic {
+        match self.font_style.italic {
             FontStyleSetting::True => strukt.serialize_field("italic", &true)?,
             FontStyleSetting::False => strukt.serialize_field("italic", &false)?,
             FontStyleSetting::Inherit => {}
         }
 
-        match self.font_styles.underline {
+        match self.font_style.underline {
             FontStyleSetting::True => strukt.serialize_field("underline", &true)?,
             FontStyleSetting::False => strukt.serialize_field("underline", &false)?,
             FontStyleSetting::Inherit => {}
