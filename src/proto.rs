@@ -156,7 +156,7 @@ mod tests {
         rules.insert(
             semantic::Selector {
                 kind: semantic::TokenKind::Wildcard,
-                modifiers: vec!["unsafe".to_string()],
+                modifiers: vec![semantic::Identifier::new("unsafe").unwrap()],
                 language: None,
             },
             semantic::Style {
@@ -171,9 +171,9 @@ mod tests {
 
         rules.insert(
             semantic::Selector {
-                kind: semantic::TokenKind::Specific("variable".to_string()),
+                kind: semantic::TokenKind::Specific(semantic::Identifier::new("variable").unwrap()),
                 modifiers: Vec::new(),
-                language: Some("rust".to_string()),
+                language: Some(semantic::Identifier::new("rust").unwrap()),
             },
             semantic::Style {
                 foreground: Some(Color { r: 224, g: 224, b: 201, a: 255 }),
@@ -187,8 +187,11 @@ mod tests {
 
         rules.insert(
             semantic::Selector {
-                kind: semantic::TokenKind::Specific("function".to_string()),
-                modifiers: vec!["declaration".to_string(), "public".to_string()],
+                kind: semantic::TokenKind::Specific(semantic::Identifier::new("function").unwrap()),
+                modifiers: vec![
+                    semantic::Identifier::new("declaration").unwrap(),
+                    semantic::Identifier::new("public").unwrap(),
+                ],
                 language: None,
             },
             semantic::Style {

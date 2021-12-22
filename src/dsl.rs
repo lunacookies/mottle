@@ -67,15 +67,15 @@ pub trait IntoTokenKind {
     fn into_token_kind(self) -> proto::semantic::TokenKind;
 }
 
-impl IntoTokenKind for &str {
+impl IntoTokenKind for &'static str {
     fn into_token_kind(self) -> proto::semantic::TokenKind {
-        proto::semantic::TokenKind::Specific(self.to_string())
+        proto::semantic::TokenKind::Specific(proto::semantic::Identifier::new(self).unwrap())
     }
 }
 
 impl IntoTokenKind for String {
     fn into_token_kind(self) -> proto::semantic::TokenKind {
-        proto::semantic::TokenKind::Specific(self)
+        proto::semantic::TokenKind::Specific(proto::semantic::Identifier::new(self).unwrap())
     }
 }
 
@@ -154,11 +154,11 @@ impl BitOr<SemanticOrTextMateSelectors> for SemanticSelector {
     }
 }
 
-impl Shr<&str> for SemanticSelector {
+impl Shr<&'static str> for SemanticSelector {
     type Output = Self;
 
-    fn shr(mut self, rhs: &str) -> Self::Output {
-        self.0.modifiers.push(rhs.to_string());
+    fn shr(mut self, rhs: &'static str) -> Self::Output {
+        self.0.modifiers.push(proto::semantic::Identifier::new(rhs).unwrap());
         self
     }
 }
@@ -287,7 +287,9 @@ mod tests {
 
         rules.insert(
             proto::semantic::Selector {
-                kind: proto::semantic::TokenKind::Specific("string".to_string()),
+                kind: proto::semantic::TokenKind::Specific(
+                    proto::semantic::Identifier::new("string").unwrap(),
+                ),
                 modifiers: Vec::new(),
                 language: None,
             },
@@ -330,7 +332,9 @@ mod tests {
 
         rules.insert(
             proto::semantic::Selector {
-                kind: proto::semantic::TokenKind::Specific("number".to_string()),
+                kind: proto::semantic::TokenKind::Specific(
+                    proto::semantic::Identifier::new("number").unwrap(),
+                ),
                 modifiers: Vec::new(),
                 language: None,
             },
@@ -339,7 +343,9 @@ mod tests {
 
         rules.insert(
             proto::semantic::Selector {
-                kind: proto::semantic::TokenKind::Specific("boolean".to_string()),
+                kind: proto::semantic::TokenKind::Specific(
+                    proto::semantic::Identifier::new("boolean").unwrap(),
+                ),
                 modifiers: Vec::new(),
                 language: None,
             },
@@ -348,7 +354,9 @@ mod tests {
 
         rules.insert(
             proto::semantic::Selector {
-                kind: proto::semantic::TokenKind::Specific("enumMember".to_string()),
+                kind: proto::semantic::TokenKind::Specific(
+                    proto::semantic::Identifier::new("enumMember").unwrap(),
+                ),
                 modifiers: Vec::new(),
                 language: None,
             },
@@ -387,7 +395,9 @@ mod tests {
 
         rules.insert(
             proto::semantic::Selector {
-                kind: proto::semantic::TokenKind::Specific("parameter".to_string()),
+                kind: proto::semantic::TokenKind::Specific(
+                    proto::semantic::Identifier::new("parameter").unwrap(),
+                ),
                 modifiers: Vec::new(),
                 language: None,
             },
@@ -396,8 +406,13 @@ mod tests {
 
         rules.insert(
             proto::semantic::Selector {
-                kind: proto::semantic::TokenKind::Specific("variable".to_string()),
-                modifiers: vec!["declaration".to_string(), "static".to_string()],
+                kind: proto::semantic::TokenKind::Specific(
+                    proto::semantic::Identifier::new("variable").unwrap(),
+                ),
+                modifiers: vec![
+                    proto::semantic::Identifier::new("declaration").unwrap(),
+                    proto::semantic::Identifier::new("static").unwrap(),
+                ],
                 language: None,
             },
             style,
@@ -405,7 +420,9 @@ mod tests {
 
         rules.insert(
             proto::semantic::Selector {
-                kind: proto::semantic::TokenKind::Specific("function".to_string()),
+                kind: proto::semantic::TokenKind::Specific(
+                    proto::semantic::Identifier::new("function").unwrap(),
+                ),
                 modifiers: Vec::new(),
                 language: None,
             },
@@ -432,7 +449,9 @@ mod tests {
 
         rules.insert(
             proto::semantic::Selector {
-                kind: proto::semantic::TokenKind::Specific("variable".to_string()),
+                kind: proto::semantic::TokenKind::Specific(
+                    proto::semantic::Identifier::new("variable").unwrap(),
+                ),
                 modifiers: Vec::new(),
                 language: None,
             },
@@ -472,7 +491,9 @@ mod tests {
 
         rules.insert(
             proto::semantic::Selector {
-                kind: proto::semantic::TokenKind::Specific("keyword".to_string()),
+                kind: proto::semantic::TokenKind::Specific(
+                    proto::semantic::Identifier::new("keyword").unwrap(),
+                ),
                 modifiers: Vec::new(),
                 language: None,
             },
@@ -517,7 +538,7 @@ mod tests {
         rules.insert(
             proto::semantic::Selector {
                 kind: proto::semantic::TokenKind::Wildcard,
-                modifiers: vec!["mutable".to_string()],
+                modifiers: vec![proto::semantic::Identifier::new("mutable").unwrap()],
                 language: None,
             },
             proto::semantic::Style {

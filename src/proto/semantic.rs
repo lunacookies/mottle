@@ -2,6 +2,7 @@ use super::Color;
 use indexmap::IndexMap;
 use serde::ser::SerializeStruct;
 use serde::Serialize;
+use std::borrow::Cow;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Highlighting {
@@ -12,8 +13,8 @@ pub enum Highlighting {
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Selector {
     pub kind: TokenKind,
-    pub modifiers: Vec<String>,
-    pub language: Option<String>,
+    pub modifiers: Vec<Identifier>,
+    pub language: Option<Identifier>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -25,8 +26,11 @@ pub struct Style {
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum TokenKind {
     Wildcard,
-    Specific(String),
+    Specific(Identifier),
 }
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct Identifier(Cow<'static, str>);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct FontStyle {
@@ -73,17 +77,17 @@ impl Serialize for Selector {
 
         match &self.kind {
             TokenKind::Wildcard => s.push('*'),
-            TokenKind::Specific(kind) => s.push_str(kind),
+            TokenKind::Specific(kind) => s.push_str(&kind.0),
         }
 
         for modifier in &self.modifiers {
             s.push('.');
-            s.push_str(modifier);
+            s.push_str(&modifier.0);
         }
 
         if let Some(language) = &self.language {
             s.push(':');
-            s.push_str(language);
+            s.push_str(&language.0);
         }
 
         serializer.serialize_str(&s)
@@ -117,5 +121,18 @@ impl Serialize for Style {
         }
 
         strukt.end()
+    }
+}
+
+impl Identifier {
+    pub fn new(s: impl Into<Cow<'static, str>>) -> Option<Self> {
+        let s = s.into();
+
+        let is_valid = s.chars().all(|c| c.is_ascii_alphanumeric() || c == '-');
+        if !is_valid {
+            return None;
+        }
+
+        Some(Self(s))
     }
 }
