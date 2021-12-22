@@ -5,7 +5,7 @@ use self::semantic_highlighting_typestate::{
 };
 use crate::proto;
 use indexmap::IndexMap;
-use std::ops::{BitOr, Shr};
+use std::ops::{BitOr, BitXor, Shr};
 
 #[derive(Debug)]
 pub struct ThemeBuilder<S> {
@@ -159,6 +159,15 @@ impl Shr<&'static str> for SemanticSelector {
 
     fn shr(mut self, rhs: &'static str) -> Self::Output {
         self.0.modifiers.push(proto::semantic::Identifier::new(rhs).unwrap());
+        self
+    }
+}
+
+impl BitXor<&'static str> for SemanticSelector {
+    type Output = Self;
+
+    fn bitxor(mut self, rhs: &'static str) -> Self::Output {
+        self.0.language = Some(proto::semantic::Identifier::new(rhs).unwrap());
         self
     }
 }
@@ -566,6 +575,42 @@ mod tests {
                         }
                     }
                 }],
+                semantic_highlighting: proto::semantic::Highlighting::On { rules }
+            }
+        );
+    }
+
+    #[test]
+    fn semantic_language() {
+        let mut t = ThemeBuilder::new_with_semantic_highlighting();
+
+        t.a(t.s("variable") >> "constant" ^ "rust", 0xFF0000FF);
+
+        let mut rules = IndexMap::new();
+
+        rules.insert(
+            proto::semantic::Selector {
+                kind: proto::semantic::TokenKind::Specific(
+                    proto::semantic::Identifier::new("variable").unwrap(),
+                ),
+                modifiers: vec![proto::semantic::Identifier::new("constant").unwrap()],
+                language: Some(proto::semantic::Identifier::new("rust").unwrap()),
+            },
+            proto::semantic::Style {
+                foreground: Some(proto::Color { r: 0xFF, g: 0x00, b: 0x00, a: 0xFF }),
+                font_style: proto::semantic::FontStyle {
+                    bold: proto::semantic::FontStyleSetting::Inherit,
+                    italic: proto::semantic::FontStyleSetting::Inherit,
+                    underline: proto::semantic::FontStyleSetting::Inherit,
+                },
+            },
+        );
+
+        assert_eq!(
+            t.build("My cool theme"),
+            proto::Theme {
+                name: "My cool theme".to_string(),
+                textmate_rules: Vec::new(),
                 semantic_highlighting: proto::semantic::Highlighting::On { rules }
             }
         );
