@@ -125,14 +125,15 @@ impl Serialize for Style {
 }
 
 impl Identifier {
-    pub fn new(s: impl Into<Cow<'static, str>>) -> Option<Self> {
+    pub fn new(s: impl Into<Cow<'static, str>>) -> Result<Self, String> {
         let s = s.into();
 
-        let is_valid = s.chars().all(|c| c.is_ascii_alphanumeric() || c == '-');
-        if !is_valid {
-            return None;
+        for c in s.chars() {
+            if !c.is_ascii_alphanumeric() && c != '-' {
+                return Err(format!("invalid character in ‘{s}’"));
+            }
         }
 
-        Some(Self(s))
+        Ok(Self(s))
     }
 }
