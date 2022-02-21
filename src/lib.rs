@@ -8,22 +8,22 @@ use std::path::{Path, PathBuf};
 use std::{fs, io};
 use thiserror::Error;
 
-pub fn format_theme(theme: &proto::Theme) -> String {
+pub fn save_theme(theme: &proto::Theme) -> Result<(), SaveThemeError> {
+    let themes_dir = prepare_themes_dir()?;
+    let theme_path = themes_dir.join("Foo-color-theme.json");
+
+    fs::write(&theme_path, serialize_theme(theme))
+        .map_err(|e| SaveThemeError::WriteTheme(e, theme_path))?;
+
+    Ok(())
+}
+
+pub fn serialize_theme(theme: &proto::Theme) -> String {
     let mut v = Vec::new();
     let mut serializer = Serializer::with_formatter(&mut v, PrettyFormatter::with_indent(b"    "));
     theme.serialize(&mut serializer).unwrap();
 
     String::from_utf8(v).unwrap()
-}
-
-pub fn save_theme(serialized_theme: &str) -> Result<(), SaveThemeError> {
-    let themes_dir = prepare_themes_dir()?;
-    let theme_path = themes_dir.join("Foo-color-theme.json");
-
-    fs::write(&theme_path, serialized_theme)
-        .map_err(|e| SaveThemeError::WriteTheme(e, theme_path))?;
-
-    Ok(())
 }
 
 fn prepare_themes_dir() -> Result<&'static Path, SaveThemeError> {
