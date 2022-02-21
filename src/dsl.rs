@@ -1,66 +1,107 @@
-pub mod semantic_highlighting_typestate;
-
-use self::semantic_highlighting_typestate::{
-    SemanticHighlightingDisabled, SemanticHighlightingEnabled, SemanticHighlightingState,
-};
 use crate::proto;
 use indexmap::IndexMap;
 use std::ops::{BitOr, BitXor, Shr};
 
-#[derive(Debug)]
-pub struct ThemeBuilder<S> {
+#[derive(Debug, Default)]
+pub struct ThemeBuilder {
     pub textmate_rules: Vec<proto::textmate::Rule>,
-    pub semantic_highlighting: S,
+    pub semantic_rules: IndexMap<proto::semantic::Selector, proto::semantic::Style>,
 }
 
-impl ThemeBuilder<SemanticHighlightingEnabled> {
-    pub fn new_with_semantic_highlighting() -> Self {
-        Self {
-            textmate_rules: Vec::new(),
-            semantic_highlighting: SemanticHighlightingEnabled { rules: IndexMap::new() },
+impl ThemeBuilder {
+    pub fn a(
+        &mut self,
+        selectors: impl Into<SemanticOrTextMateSelectors>,
+        style: impl Into<Style>,
+    ) {
+        let mut textmate_scopes = Vec::new();
+        let mut semantic_selectors = Vec::new();
+        let selectors = selectors.into();
+        let style = style.into();
+
+        for selector in selectors.0 {
+            match selector {
+                Selector::TextMate(scope) => textmate_scopes.push(scope),
+                Selector::Semantic(selector) => semantic_selectors.push(selector),
+            }
         }
-    }
-}
 
-impl ThemeBuilder<SemanticHighlightingDisabled> {
-    pub fn new_without_semantic_highlighting() -> Self {
-        Self { textmate_rules: Vec::new(), semantic_highlighting: SemanticHighlightingDisabled }
-    }
-}
+        if !textmate_scopes.is_empty() {
+            self.textmate_rules.push(proto::textmate::Rule {
+                scope: textmate_scopes,
+                settings: style_to_textmate_rule_settings(style),
+            });
+        }
 
-impl<S> ThemeBuilder<S>
-where
-    S: SemanticHighlightingState,
-{
-    pub fn a(&mut self, selectors: impl Into<S::Selectors>, style: impl Into<Style>) {
-        self.semantic_highlighting.add_rule(
-            selectors.into(),
-            style.into(),
-            &mut self.textmate_rules,
-        );
+        let semantic_style = proto::semantic::Style {
+            foreground: style.foreground,
+            font_style: match style.font_style {
+                Some(font_style) => {
+                    let mut s = proto::semantic::FontStyle {
+                        bold: proto::semantic::FontStyleSetting::False,
+                        italic: proto::semantic::FontStyleSetting::False,
+                        underline: proto::semantic::FontStyleSetting::False,
+                    };
+
+                    *match font_style {
+                        FontStyle::Bold => &mut s.bold,
+                        FontStyle::Italic => &mut s.italic,
+                        FontStyle::Underline => &mut s.underline,
+                    } = proto::semantic::FontStyleSetting::True;
+
+                    s
+                }
+                None => proto::semantic::FontStyle {
+                    bold: proto::semantic::FontStyleSetting::Inherit,
+                    italic: proto::semantic::FontStyleSetting::Inherit,
+                    underline: proto::semantic::FontStyleSetting::Inherit,
+                },
+            },
+        };
+
+        for selector in semantic_selectors {
+            self.semantic_rules.insert(selector, semantic_style);
+        }
+
+        fn style_to_textmate_rule_settings(style: Style) -> proto::textmate::RuleSettings {
+            let font_style = match style.font_style {
+                Some(font_style) => {
+                    let mut s = (false, false, false);
+
+                    *match font_style {
+                        FontStyle::Bold => &mut s.0,
+                        FontStyle::Italic => &mut s.1,
+                        FontStyle::Underline => &mut s.2,
+                    } = true;
+
+                    proto::textmate::FontStyle::Set { bold: s.0, italic: s.1, underline: s.2 }
+                }
+                None => proto::textmate::FontStyle::Inherit,
+            };
+
+            proto::textmate::RuleSettings { foreground: style.foreground, font_style }
+        }
     }
 
     pub fn build(self, name: impl Into<String>) -> proto::Theme {
         proto::Theme {
             name: name.into(),
             textmate_rules: self.textmate_rules,
-            semantic_highlighting: self.semantic_highlighting.into_proto(),
+            semantic_highlighting: proto::semantic::Highlighting::On { rules: self.semantic_rules },
         }
     }
 }
 
-impl ThemeBuilder<SemanticHighlightingEnabled> {
-    pub fn tm(&self, scope: impl Into<String>) -> SemanticOrTextMateSelectors {
-        SemanticOrTextMateSelectors(vec![SemanticOrTextMateSelector::TextMate(scope.into())])
-    }
+pub fn tm(scope: impl Into<String>) -> SemanticOrTextMateSelectors {
+    SemanticOrTextMateSelectors(vec![Selector::TextMate(scope.into())])
+}
 
-    pub fn s(&self, token_kind: impl IntoTokenKind) -> SemanticSelector {
-        SemanticSelector(proto::semantic::Selector {
-            kind: token_kind.into_token_kind(),
-            modifiers: Vec::new(),
-            language: None,
-        })
-    }
+pub fn s(token_kind: impl IntoTokenKind) -> SemanticOrTextMateSelectors {
+    SemanticOrTextMateSelectors(vec![Selector::Semantic(proto::semantic::Selector {
+        kind: token_kind.into_token_kind(),
+        modifiers: Vec::new(),
+        language: None,
+    })])
 }
 
 pub trait IntoTokenKind {
@@ -86,88 +127,54 @@ impl IntoTokenKind for char {
     }
 }
 
-impl ThemeBuilder<SemanticHighlightingDisabled> {
-    pub fn tm(&self, scope: impl Into<String>) -> TextMateScopes {
-        TextMateScopes(vec![scope.into()])
-    }
-}
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct SemanticOrTextMateSelectors(Vec<Selector>);
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct SemanticOrTextMateSelectors(Vec<SemanticOrTextMateSelector>);
-
-impl From<SemanticSelector> for SemanticOrTextMateSelectors {
-    fn from(semantic_selector: SemanticSelector) -> Self {
-        Self(vec![SemanticOrTextMateSelector::Semantic(semantic_selector)])
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub enum SemanticOrTextMateSelector {
+pub enum Selector {
     TextMate(String),
-    Semantic(SemanticSelector),
+    Semantic(proto::semantic::Selector),
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct TextMateScopes(Vec<String>);
+impl BitOr<SemanticOrTextMateSelectors> for SemanticOrTextMateSelectors {
+    type Output = SemanticOrTextMateSelectors;
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct SemanticSelector(proto::semantic::Selector);
-
-impl BitOr for TextMateScopes {
-    type Output = Self;
-
-    fn bitor(mut self, rhs: Self) -> Self::Output {
-        self.0.extend_from_slice(&rhs.0);
+    fn bitor(mut self, mut rhs: SemanticOrTextMateSelectors) -> Self::Output {
+        self.0.append(&mut rhs.0);
         self
     }
 }
 
-impl BitOr<SemanticSelector> for SemanticOrTextMateSelectors {
-    type Output = SemanticOrTextMateSelectors;
-
-    fn bitor(mut self, rhs: SemanticSelector) -> Self::Output {
-        self.0.push(SemanticOrTextMateSelector::Semantic(rhs));
-        self
-    }
-}
-
-impl BitOr for SemanticSelector {
-    type Output = SemanticOrTextMateSelectors;
-
-    fn bitor(self, rhs: Self) -> Self::Output {
-        SemanticOrTextMateSelectors(vec![
-            SemanticOrTextMateSelector::Semantic(self),
-            SemanticOrTextMateSelector::Semantic(rhs),
-        ])
-    }
-}
-
-impl BitOr<SemanticOrTextMateSelectors> for SemanticSelector {
-    type Output = SemanticOrTextMateSelectors;
-
-    fn bitor(self, mut rhs: SemanticOrTextMateSelectors) -> Self::Output {
-        let mut selectors =
-            SemanticOrTextMateSelectors(vec![SemanticOrTextMateSelector::Semantic(self)]);
-        selectors.0.append(&mut rhs.0);
-
-        selectors
-    }
-}
-
-impl Shr<&'static str> for SemanticSelector {
+impl Shr<&'static str> for SemanticOrTextMateSelectors {
     type Output = Self;
 
     fn shr(mut self, rhs: &'static str) -> Self::Output {
-        self.0.modifiers.push(proto::semantic::Identifier::new(rhs).unwrap());
+        for selector in &mut self.0 {
+            match selector {
+                Selector::Semantic(semantic) => {
+                    semantic.modifiers.push(proto::semantic::Identifier::new(rhs).unwrap());
+                }
+                Selector::TextMate(_) => panic!("cannot add a modifier to TextMate selector"),
+            }
+        }
+
         self
     }
 }
 
-impl BitXor<&'static str> for SemanticSelector {
+impl BitXor<&'static str> for SemanticOrTextMateSelectors {
     type Output = Self;
 
     fn bitxor(mut self, rhs: &'static str) -> Self::Output {
-        self.0.language = Some(proto::semantic::Identifier::new(rhs).unwrap());
+        for selector in &mut self.0 {
+            match selector {
+                Selector::Semantic(semantic) => {
+                    semantic.language = Some(proto::semantic::Identifier::new(rhs).unwrap());
+                }
+                Selector::TextMate(_) => panic!("cannot add set language of TextMate selector"),
+            }
+        }
+
         self
     }
 }
@@ -211,8 +218,8 @@ mod tests {
     use pretty_assertions::assert_eq;
 
     #[test]
-    fn empty_with_semantic_highlighting() {
-        let t = ThemeBuilder::new_with_semantic_highlighting();
+    fn empty() {
+        let t = ThemeBuilder::default();
 
         assert_eq!(
             t.build("My cool theme"),
@@ -225,24 +232,10 @@ mod tests {
     }
 
     #[test]
-    fn empty_without_semantic_highlighting() {
-        let t = ThemeBuilder::new_without_semantic_highlighting();
-
-        assert_eq!(
-            t.build("My cool theme"),
-            proto::Theme {
-                name: "My cool theme".to_string(),
-                textmate_rules: Vec::new(),
-                semantic_highlighting: proto::semantic::Highlighting::Off
-            }
-        );
-    }
-
-    #[test]
     fn add_single_textmate_scope_with_rgba_u32() {
-        let mut t = ThemeBuilder::new_without_semantic_highlighting();
+        let mut t = ThemeBuilder::default();
 
-        t.a(t.tm("keyword.operator"), 0xF92672FF);
+        t.a(tm("keyword.operator"), 0xF92672FF);
 
         assert_eq!(
             t.build("My cool theme"),
@@ -255,16 +248,16 @@ mod tests {
                         font_style: proto::textmate::FontStyle::Inherit
                     }
                 }],
-                semantic_highlighting: proto::semantic::Highlighting::Off
+                semantic_highlighting: proto::semantic::Highlighting::On { rules: IndexMap::new() }
             }
         );
     }
 
     #[test]
     fn add_multiple_textmate_scopes_with_rgba_u32() {
-        let mut t = ThemeBuilder::new_without_semantic_highlighting();
+        let mut t = ThemeBuilder::default();
 
-        t.a(t.tm("keyword.operator") | t.tm("punctuation") | t.tm("keyword.other"), 0xF92672FF);
+        t.a(tm("keyword.operator") | tm("punctuation") | tm("keyword.other"), 0xF92672FF);
 
         assert_eq!(
             t.build("My cool theme"),
@@ -281,16 +274,16 @@ mod tests {
                         font_style: proto::textmate::FontStyle::Inherit
                     }
                 }],
-                semantic_highlighting: proto::semantic::Highlighting::Off
+                semantic_highlighting: proto::semantic::Highlighting::On { rules: IndexMap::new() }
             }
         );
     }
 
     #[test]
     fn add_single_semantic_selector_with_rgba_u32() {
-        let mut t = ThemeBuilder::new_with_semantic_highlighting();
+        let mut t = ThemeBuilder::default();
 
-        t.a(t.s("string"), 0xD49E9EFF);
+        t.a(s("string"), 0xD49E9EFF);
 
         let mut rules = IndexMap::new();
 
@@ -324,9 +317,9 @@ mod tests {
 
     #[test]
     fn add_multiple_semantic_selectors_with_rgba_u32() {
-        let mut t = ThemeBuilder::new_with_semantic_highlighting();
+        let mut t = ThemeBuilder::default();
 
-        t.a(t.s("number") | t.s("boolean") | t.s("enumMember"), 0xB5CEA8FF);
+        t.a(s("number") | s("boolean") | s("enumMember"), 0xB5CEA8FF);
 
         let mut rules = IndexMap::new();
 
@@ -384,10 +377,10 @@ mod tests {
 
     #[test]
     fn add_semantic_selector_with_modifiers() {
-        let mut t = ThemeBuilder::new_with_semantic_highlighting();
+        let mut t = ThemeBuilder::default();
 
         t.a(
-            t.s("parameter") | t.s("variable") >> "declaration" >> "static" | t.s("function"),
+            s("parameter") | s("variable") >> "declaration" >> "static" | s("function"),
             0xD0AAFCFF,
         );
 
@@ -450,9 +443,9 @@ mod tests {
 
     #[test]
     fn add_semantic_and_textmate_selectors() {
-        let mut t = ThemeBuilder::new_with_semantic_highlighting();
+        let mut t = ThemeBuilder::default();
 
-        t.a(t.s("variable") | t.tm("variable"), 0xFFFFFFFF);
+        t.a(s("variable") | tm("variable"), 0xFFFFFFFF);
 
         let mut rules = IndexMap::new();
 
@@ -492,9 +485,9 @@ mod tests {
 
     #[test]
     fn rgba_u32_and_font_style() {
-        let mut t = ThemeBuilder::new_with_semantic_highlighting();
+        let mut t = ThemeBuilder::default();
 
-        t.a(t.tm("keyword") | t.s("keyword"), (0xEADFAFFF, FontStyle::Bold));
+        t.a(tm("keyword") | s("keyword"), (0xEADFAFFF, FontStyle::Bold));
 
         let mut rules = IndexMap::new();
 
@@ -538,9 +531,9 @@ mod tests {
 
     #[test]
     fn font_style() {
-        let mut t = ThemeBuilder::new_with_semantic_highlighting();
+        let mut t = ThemeBuilder::default();
 
-        t.a(t.tm("markup.underline") | t.s('*') >> "mutable", FontStyle::Underline);
+        t.a(tm("markup.underline") | s('*') >> "mutable", FontStyle::Underline);
 
         let mut rules = IndexMap::new();
 
@@ -582,9 +575,9 @@ mod tests {
 
     #[test]
     fn semantic_language() {
-        let mut t = ThemeBuilder::new_with_semantic_highlighting();
+        let mut t = ThemeBuilder::default();
 
-        t.a(t.s("variable") >> "constant" ^ "rust", 0xFF0000FF);
+        t.a(s("variable") >> "constant" ^ "rust", 0xFF0000FF);
 
         let mut rules = IndexMap::new();
 
