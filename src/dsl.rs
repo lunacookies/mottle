@@ -40,9 +40,9 @@ impl ThemeBuilder {
             font_style: match style.font_style {
                 Some(font_style) => {
                     let mut s = proto::semantic::FontStyle {
-                        bold: proto::semantic::FontStyleSetting::False,
-                        italic: proto::semantic::FontStyleSetting::False,
-                        underline: proto::semantic::FontStyleSetting::False,
+                        bold: proto::semantic::FontStyleSetting::Inherit,
+                        italic: proto::semantic::FontStyleSetting::Inherit,
+                        underline: proto::semantic::FontStyleSetting::Inherit,
                     };
 
                     *match font_style {
@@ -537,8 +537,8 @@ mod tests {
                 foreground: Some(proto::Color { r: 0xEA, g: 0xDF, b: 0xAF, a: 0xFF }),
                 font_style: proto::semantic::FontStyle {
                     bold: proto::semantic::FontStyleSetting::True,
-                    italic: proto::semantic::FontStyleSetting::False,
-                    underline: proto::semantic::FontStyleSetting::False,
+                    italic: proto::semantic::FontStyleSetting::Inherit,
+                    underline: proto::semantic::FontStyleSetting::Inherit,
                 },
             },
         );
@@ -581,8 +581,8 @@ mod tests {
             proto::semantic::Style {
                 foreground: None,
                 font_style: proto::semantic::FontStyle {
-                    bold: proto::semantic::FontStyleSetting::False,
-                    italic: proto::semantic::FontStyleSetting::False,
+                    bold: proto::semantic::FontStyleSetting::Inherit,
+                    italic: proto::semantic::FontStyleSetting::Inherit,
                     underline: proto::semantic::FontStyleSetting::True,
                 },
             },
