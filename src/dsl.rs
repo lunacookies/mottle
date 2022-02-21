@@ -1,7 +1,7 @@
 use crate::proto;
 use indexmap::IndexMap;
 use std::borrow::Cow;
-use std::ops::{BitOr, BitXor, Shr};
+use std::ops::{BitAnd, BitOr, BitXor};
 
 #[derive(Debug, Default)]
 pub struct ThemeBuilder {
@@ -160,10 +160,10 @@ impl BitOr for SemanticOrTextMateSelectors {
     }
 }
 
-impl Shr<&'static str> for SemanticOrTextMateSelectors {
+impl BitAnd<&'static str> for SemanticOrTextMateSelectors {
     type Output = Self;
 
-    fn shr(mut self, rhs: &'static str) -> Self::Output {
+    fn bitand(mut self, rhs: &'static str) -> Self::Output {
         for selector in &mut self.0 {
             match selector {
                 Selector::Semantic(semantic) => {
@@ -411,10 +411,7 @@ mod tests {
     fn add_semantic_selector_with_modifiers() {
         let mut t = ThemeBuilder::default();
 
-        t.a(
-            s("parameter") | s("variable") >> "declaration" >> "static" | s("function"),
-            0xD0AAFCFF,
-        );
+        t.a(s("parameter") | s("variable") & "declaration" & "static" | s("function"), 0xD0AAFCFF);
 
         let mut rules = IndexMap::new();
 
@@ -568,7 +565,7 @@ mod tests {
     fn font_style() {
         let mut t = ThemeBuilder::default();
 
-        t.a(tm("markup.underline") | s('*') >> "mutable", FontStyle::Underline);
+        t.a(tm("markup.underline") | s('*') & "mutable", FontStyle::Underline);
 
         let mut rules = IndexMap::new();
 
@@ -613,7 +610,7 @@ mod tests {
     fn semantic_language() {
         let mut t = ThemeBuilder::default();
 
-        t.a(s("variable") >> "constant" ^ "rust", 0xFF0000FF);
+        t.a(s("variable") & "constant" ^ "rust", 0xFF0000FF);
 
         let mut rules = IndexMap::new();
 
