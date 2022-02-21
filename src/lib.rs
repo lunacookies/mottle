@@ -10,7 +10,7 @@ use thiserror::Error;
 
 pub fn save_theme(theme: &proto::Theme) -> Result<(), SaveThemeError> {
     let themes_dir = prepare_themes_dir()?;
-    let theme_path = themes_dir.join("Foo-color-theme.json");
+    let theme_path = themes_dir.join(format!("{}-color-theme.json", theme.name));
 
     fs::write(&theme_path, serialize_theme(theme))
         .map_err(|e| SaveThemeError::WriteTheme(e, theme_path))?;
