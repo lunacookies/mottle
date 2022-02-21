@@ -22,6 +22,7 @@ pub fn serialize_theme(theme: &proto::Theme) -> String {
     let mut v = Vec::new();
     let mut serializer = Serializer::with_formatter(&mut v, PrettyFormatter::with_indent(b"    "));
     theme.serialize(&mut serializer).unwrap();
+    v.push(b'\n');
 
     String::from_utf8(v).unwrap()
 }

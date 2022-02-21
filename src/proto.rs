@@ -48,7 +48,7 @@ mod tests {
     use indexmap::IndexMap;
 
     fn check(theme: Theme, expect: Expect) {
-        expect.assert_eq(&format!("{}\n", crate::serialize_theme(&theme)));
+        expect.assert_eq(&crate::serialize_theme(&theme));
     }
 
     #[test]
