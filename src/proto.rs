@@ -30,8 +30,14 @@ impl Serialize for Color {
     where
         S: serde::Serializer,
     {
-        serializer
-            .collect_str(&format_args!("#{:02X}{:02X}{:02X}{:02X}", self.r, self.g, self.b, self.a))
+        if self.a == 0xFF {
+            serializer.collect_str(&format_args!("#{:02X}{:02X}{:02X}", self.r, self.g, self.b))
+        } else {
+            serializer.collect_str(&format_args!(
+                "#{:02X}{:02X}{:02X}{:02X}",
+                self.r, self.g, self.b, self.a
+            ))
+        }
     }
 }
 
@@ -110,7 +116,7 @@ mod tests {
                                 "entity.function.name"
                             ],
                             "settings": {
-                                "foreground": "#9CDBDEFF"
+                                "foreground": "#9CDBDE"
                             }
                         }
                     ],
@@ -149,7 +155,7 @@ mod tests {
                                 "storage"
                             ],
                             "settings": {
-                                "foreground": "#000000FF",
+                                "foreground": "#000000",
                                 "fontStyle": "italic bold"
                             }
                         }
@@ -230,14 +236,14 @@ mod tests {
                     "semanticHighlighting": true,
                     "semanticTokenColors": {
                         "*.unsafe": {
-                            "foreground": "#FF0000FF",
+                            "foreground": "#FF0000",
                             "bold": true
                         },
                         "variable:rust": {
-                            "foreground": "#E0E0C9FF"
+                            "foreground": "#E0E0C9"
                         },
                         "function.declaration.public": {
-                            "foreground": "#9CDBDEFF"
+                            "foreground": "#9CDBDE"
                         }
                     },
                     "colors": {}
@@ -265,7 +271,7 @@ mod tests {
                     "tokenColors": [],
                     "semanticHighlighting": false,
                     "colors": {
-                        "editor.foreground": "#FF0000FF"
+                        "editor.foreground": "#FF0000"
                     }
                 }
             "##]],
