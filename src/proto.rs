@@ -1,7 +1,9 @@
 pub mod semantic;
 pub mod textmate;
 
+use indexmap::IndexMap;
 use serde::Serialize;
+use std::borrow::Cow;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -11,6 +13,8 @@ pub struct Theme {
     pub textmate_rules: Vec<textmate::Rule>,
     #[serde(flatten)]
     pub semantic_highlighting: semantic::Highlighting,
+    #[serde(rename = "colors")]
+    pub workbench_rules: IndexMap<Cow<'static, str>, Color>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -48,12 +52,14 @@ mod tests {
                 name: "My cool theme".to_string(),
                 textmate_rules: Vec::new(),
                 semantic_highlighting: semantic::Highlighting::Off,
+                workbench_rules: IndexMap::new(),
             },
             expect![[r#"
                 {
                     "name": "My cool theme",
                     "tokenColors": [],
-                    "semanticHighlighting": false
+                    "semanticHighlighting": false,
+                    "colors": {}
                 }
             "#]],
         );
@@ -66,13 +72,15 @@ mod tests {
                 name: "My cool theme".to_string(),
                 textmate_rules: Vec::new(),
                 semantic_highlighting: semantic::Highlighting::On { rules: IndexMap::new() },
+                workbench_rules: IndexMap::new(),
             },
             expect![[r#"
                 {
                     "name": "My cool theme",
                     "tokenColors": [],
                     "semanticHighlighting": true,
-                    "semanticTokenColors": {}
+                    "semanticTokenColors": {},
+                    "colors": {}
                 }
             "#]],
         );
@@ -91,6 +99,7 @@ mod tests {
                     },
                 }],
                 semantic_highlighting: semantic::Highlighting::Off,
+                workbench_rules: IndexMap::new(),
             },
             expect![[r##"
                 {
@@ -105,7 +114,8 @@ mod tests {
                             }
                         }
                     ],
-                    "semanticHighlighting": false
+                    "semanticHighlighting": false,
+                    "colors": {}
                 }
             "##]],
         );
@@ -128,6 +138,7 @@ mod tests {
                     },
                 }],
                 semantic_highlighting: semantic::Highlighting::Off,
+                workbench_rules: IndexMap::new(),
             },
             expect![[r##"
                 {
@@ -143,7 +154,8 @@ mod tests {
                             }
                         }
                     ],
-                    "semanticHighlighting": false
+                    "semanticHighlighting": false,
+                    "colors": {}
                 }
             "##]],
         );
@@ -209,6 +221,7 @@ mod tests {
                 name: "My cool theme".to_string(),
                 textmate_rules: Vec::new(),
                 semantic_highlighting: semantic::Highlighting::On { rules },
+                workbench_rules: IndexMap::new(),
             },
             expect![[r##"
                 {
@@ -226,6 +239,33 @@ mod tests {
                         "function.declaration.public": {
                             "foreground": "#9CDBDEFF"
                         }
+                    },
+                    "colors": {}
+                }
+            "##]],
+        );
+    }
+
+    #[test]
+    fn workbench_rules() {
+        let mut workbench_rules = IndexMap::new();
+        workbench_rules
+            .insert(Cow::Borrowed("editor.foreground"), Color { r: 255, g: 0, b: 0, a: 255 });
+
+        check(
+            Theme {
+                name: "My cool theme".to_string(),
+                textmate_rules: Vec::new(),
+                semantic_highlighting: semantic::Highlighting::Off,
+                workbench_rules,
+            },
+            expect![[r##"
+                {
+                    "name": "My cool theme",
+                    "tokenColors": [],
+                    "semanticHighlighting": false,
+                    "colors": {
+                        "editor.foreground": "#FF0000FF"
                     }
                 }
             "##]],

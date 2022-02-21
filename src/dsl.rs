@@ -1,11 +1,13 @@
 use crate::proto;
 use indexmap::IndexMap;
+use std::borrow::Cow;
 use std::ops::{BitOr, BitXor, Shr};
 
 #[derive(Debug, Default)]
 pub struct ThemeBuilder {
     pub textmate_rules: Vec<proto::textmate::Rule>,
     pub semantic_rules: IndexMap<proto::semantic::Selector, proto::semantic::Style>,
+    pub workbench_rules: IndexMap<Cow<'static, str>, proto::Color>,
 }
 
 impl ThemeBuilder {
@@ -83,11 +85,20 @@ impl ThemeBuilder {
         }
     }
 
+    pub fn w(&mut self, selector: WorkbenchSelectors, color: u32) {
+        let [r, g, b, a] = color.to_be_bytes();
+
+        for selector in selector.0 {
+            self.workbench_rules.insert(selector.into(), proto::Color { r, g, b, a });
+        }
+    }
+
     pub fn build(self, name: impl Into<String>) -> proto::Theme {
         proto::Theme {
             name: name.into(),
             textmate_rules: self.textmate_rules,
             semantic_highlighting: proto::semantic::Highlighting::On { rules: self.semantic_rules },
+            workbench_rules: self.workbench_rules,
         }
     }
 }
@@ -102,6 +113,10 @@ pub fn s(token_kind: impl IntoTokenKind) -> SemanticOrTextMateSelectors {
         modifiers: Vec::new(),
         language: None,
     })])
+}
+
+pub fn w(selector: impl Into<String>) -> WorkbenchSelectors {
+    WorkbenchSelectors(vec![selector.into()])
 }
 
 pub trait IntoTokenKind {
@@ -136,10 +151,10 @@ pub enum Selector {
     Semantic(proto::semantic::Selector),
 }
 
-impl BitOr<SemanticOrTextMateSelectors> for SemanticOrTextMateSelectors {
-    type Output = SemanticOrTextMateSelectors;
+impl BitOr for SemanticOrTextMateSelectors {
+    type Output = Self;
 
-    fn bitor(mut self, mut rhs: SemanticOrTextMateSelectors) -> Self::Output {
+    fn bitor(mut self, mut rhs: Self) -> Self::Output {
         self.0.append(&mut rhs.0);
         self
     }
@@ -175,6 +190,17 @@ impl BitXor<&'static str> for SemanticOrTextMateSelectors {
             }
         }
 
+        self
+    }
+}
+
+pub struct WorkbenchSelectors(Vec<String>);
+
+impl BitOr for WorkbenchSelectors {
+    type Output = Self;
+
+    fn bitor(mut self, mut rhs: Self) -> Self::Output {
+        self.0.append(&mut rhs.0);
         self
     }
 }
@@ -216,6 +242,7 @@ pub enum FontStyle {
 mod tests {
     use super::*;
     use pretty_assertions::assert_eq;
+    use std::borrow::Cow;
 
     #[test]
     fn empty() {
@@ -226,7 +253,8 @@ mod tests {
             proto::Theme {
                 name: "My cool theme".to_string(),
                 textmate_rules: Vec::new(),
-                semantic_highlighting: proto::semantic::Highlighting::On { rules: IndexMap::new() }
+                semantic_highlighting: proto::semantic::Highlighting::On { rules: IndexMap::new() },
+                workbench_rules: IndexMap::new(),
             }
         );
     }
@@ -248,7 +276,8 @@ mod tests {
                         font_style: proto::textmate::FontStyle::Inherit
                     }
                 }],
-                semantic_highlighting: proto::semantic::Highlighting::On { rules: IndexMap::new() }
+                semantic_highlighting: proto::semantic::Highlighting::On { rules: IndexMap::new() },
+                workbench_rules: IndexMap::new(),
             }
         );
     }
@@ -274,7 +303,8 @@ mod tests {
                         font_style: proto::textmate::FontStyle::Inherit
                     }
                 }],
-                semantic_highlighting: proto::semantic::Highlighting::On { rules: IndexMap::new() }
+                semantic_highlighting: proto::semantic::Highlighting::On { rules: IndexMap::new() },
+                workbench_rules: IndexMap::new(),
             }
         );
     }
@@ -310,7 +340,8 @@ mod tests {
             proto::Theme {
                 name: "My cool theme".to_string(),
                 textmate_rules: Vec::new(),
-                semantic_highlighting: proto::semantic::Highlighting::On { rules }
+                semantic_highlighting: proto::semantic::Highlighting::On { rules },
+                workbench_rules: IndexMap::new(),
             }
         );
     }
@@ -370,7 +401,8 @@ mod tests {
             proto::Theme {
                 name: "My cool theme".to_string(),
                 textmate_rules: Vec::new(),
-                semantic_highlighting: proto::semantic::Highlighting::On { rules }
+                semantic_highlighting: proto::semantic::Highlighting::On { rules },
+                workbench_rules: IndexMap::new(),
             }
         );
     }
@@ -436,7 +468,8 @@ mod tests {
             proto::Theme {
                 name: "My cool theme".to_string(),
                 textmate_rules: Vec::new(),
-                semantic_highlighting: proto::semantic::Highlighting::On { rules }
+                semantic_highlighting: proto::semantic::Highlighting::On { rules },
+                workbench_rules: IndexMap::new(),
             }
         );
     }
@@ -478,7 +511,8 @@ mod tests {
                         font_style: proto::textmate::FontStyle::Inherit
                     }
                 }],
-                semantic_highlighting: proto::semantic::Highlighting::On { rules }
+                semantic_highlighting: proto::semantic::Highlighting::On { rules },
+                workbench_rules: IndexMap::new(),
             }
         );
     }
@@ -524,7 +558,8 @@ mod tests {
                         }
                     }
                 }],
-                semantic_highlighting: proto::semantic::Highlighting::On { rules }
+                semantic_highlighting: proto::semantic::Highlighting::On { rules },
+                workbench_rules: IndexMap::new(),
             }
         );
     }
@@ -568,7 +603,8 @@ mod tests {
                         }
                     }
                 }],
-                semantic_highlighting: proto::semantic::Highlighting::On { rules }
+                semantic_highlighting: proto::semantic::Highlighting::On { rules },
+                workbench_rules: IndexMap::new(),
             }
         );
     }
@@ -604,7 +640,40 @@ mod tests {
             proto::Theme {
                 name: "My cool theme".to_string(),
                 textmate_rules: Vec::new(),
-                semantic_highlighting: proto::semantic::Highlighting::On { rules }
+                semantic_highlighting: proto::semantic::Highlighting::On { rules },
+                workbench_rules: IndexMap::new(),
+            }
+        );
+    }
+
+    #[test]
+    fn workbench_rules() {
+        let mut t = ThemeBuilder::default();
+
+        t.w(w("editor.background"), 0x111111FF);
+        t.w(w("editor.foreground") | w("foreground"), 0xBCBCBCFF);
+
+        let mut workbench_rules = IndexMap::new();
+        workbench_rules.insert(
+            Cow::Borrowed("editor.background"),
+            proto::Color { r: 0x11, g: 0x11, b: 0x11, a: 0xFF },
+        );
+        workbench_rules.insert(
+            Cow::Borrowed("editor.foreground"),
+            proto::Color { r: 0xBC, g: 0xBC, b: 0xBC, a: 0xFF },
+        );
+        workbench_rules.insert(
+            Cow::Borrowed("foreground"),
+            proto::Color { r: 0xBC, g: 0xBC, b: 0xBC, a: 0xFF },
+        );
+
+        assert_eq!(
+            t.build("My cool theme"),
+            proto::Theme {
+                name: "My cool theme".to_string(),
+                textmate_rules: Vec::new(),
+                semantic_highlighting: proto::semantic::Highlighting::On { rules: IndexMap::new() },
+                workbench_rules,
             }
         );
     }
