@@ -61,6 +61,7 @@ mod tests {
                 workbench_rules: IndexMap::new(),
             },
             expect![[r#"
+                // Do not edit directly; this file is generated.
                 {
                     "name": "My cool theme",
                     "tokenColors": [],
@@ -81,6 +82,7 @@ mod tests {
                 workbench_rules: IndexMap::new(),
             },
             expect![[r#"
+                // Do not edit directly; this file is generated.
                 {
                     "name": "My cool theme",
                     "tokenColors": [],
@@ -108,6 +110,7 @@ mod tests {
                 workbench_rules: IndexMap::new(),
             },
             expect![[r##"
+                // Do not edit directly; this file is generated.
                 {
                     "name": "My cool theme",
                     "tokenColors": [
@@ -147,6 +150,7 @@ mod tests {
                 workbench_rules: IndexMap::new(),
             },
             expect![[r##"
+                // Do not edit directly; this file is generated.
                 {
                     "name": "My cool theme",
                     "tokenColors": [
@@ -230,6 +234,7 @@ mod tests {
                 workbench_rules: IndexMap::new(),
             },
             expect![[r##"
+                // Do not edit directly; this file is generated.
                 {
                     "name": "My cool theme",
                     "tokenColors": [],
@@ -266,6 +271,7 @@ mod tests {
                 workbench_rules,
             },
             expect![[r##"
+                // Do not edit directly; this file is generated.
                 {
                     "name": "My cool theme",
                     "tokenColors": [],

@@ -19,7 +19,7 @@ pub fn save_theme(theme: &proto::Theme) -> Result<(), SaveThemeError> {
 }
 
 pub fn serialize_theme(theme: &proto::Theme) -> String {
-    let mut v = Vec::new();
+    let mut v = b"// Do not edit directly; this file is generated.\n".to_vec();
     let mut serializer = Serializer::with_formatter(&mut v, PrettyFormatter::with_indent(b"    "));
     theme.serialize(&mut serializer).unwrap();
     v.push(b'\n');
