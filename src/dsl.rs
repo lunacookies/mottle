@@ -1,7 +1,6 @@
 use crate::proto;
 use indexmap::IndexMap;
 use std::borrow::Cow;
-use std::ops::{BitAnd, BitXor};
 
 #[derive(Debug, Default)]
 pub struct ThemeBuilder {
@@ -102,34 +101,42 @@ pub fn tm(scope: impl Into<String>) -> Selector {
     Selector::TextMate(scope.into())
 }
 
-pub fn s(token_kind: impl IntoTokenKind) -> Selector {
-    Selector::Semantic(proto::semantic::Selector {
-        kind: token_kind.into_token_kind(),
-        modifiers: Vec::new(),
-        language: None,
-    })
-}
+pub fn s(s: &str) -> Selector {
+    return match parse(s) {
+        Ok(s) => s,
+        Err(e) => panic!("Failed to parse semantic selector ‘{s}’: {e}"),
+    };
 
-pub trait IntoTokenKind {
-    fn into_token_kind(self) -> proto::semantic::TokenKind;
-}
+    fn parse(s: &str) -> Result<Selector, Cow<'static, str>> {
+        let (s, language) = match s.rfind(':') {
+            Some(idx) if idx == s.len() - 1 => {
+                return Err("expected language name after ‘:’".into())
+            }
+            Some(idx) => {
+                let language = s[idx + 1..].to_owned();
+                let language = proto::semantic::Identifier::new(language)?;
 
-impl IntoTokenKind for &'static str {
-    fn into_token_kind(self) -> proto::semantic::TokenKind {
-        proto::semantic::TokenKind::Specific(proto::semantic::Identifier::new(self).unwrap())
-    }
-}
+                (&s[..idx], Some(language))
+            }
+            None => (s, None),
+        };
 
-impl IntoTokenKind for String {
-    fn into_token_kind(self) -> proto::semantic::TokenKind {
-        proto::semantic::TokenKind::Specific(proto::semantic::Identifier::new(self).unwrap())
-    }
-}
+        let mut components = s.split('.');
 
-impl IntoTokenKind for char {
-    fn into_token_kind(self) -> proto::semantic::TokenKind {
-        assert_eq!(self, '*', "only use a `char` semantic token kind with '*' to signify wildcard");
-        proto::semantic::TokenKind::Wildcard
+        let kind = match components.next() {
+            Some("*") => proto::semantic::TokenKind::Wildcard,
+            Some(kind) => {
+                let kind = proto::semantic::Identifier::new(kind.to_owned())?;
+                proto::semantic::TokenKind::Specific(kind)
+            }
+            None => return Err("expected semantic token kind".into()),
+        };
+
+        let modifiers = components
+            .map(|m| proto::semantic::Identifier::new(m.to_owned()))
+            .collect::<Result<_, _>>()?;
+
+        Ok(Selector::Semantic(proto::semantic::Selector { kind, modifiers, language }))
     }
 }
 
@@ -137,36 +144,6 @@ impl IntoTokenKind for char {
 pub enum Selector {
     TextMate(String),
     Semantic(proto::semantic::Selector),
-}
-
-impl BitAnd<&'static str> for Selector {
-    type Output = Self;
-
-    fn bitand(mut self, rhs: &'static str) -> Self::Output {
-        match &mut self {
-            Selector::Semantic(semantic) => {
-                semantic.modifiers.push(proto::semantic::Identifier::new(rhs).unwrap());
-            }
-            Selector::TextMate(_) => panic!("cannot add a modifier to TextMate selector"),
-        }
-
-        self
-    }
-}
-
-impl BitXor<&'static str> for Selector {
-    type Output = Self;
-
-    fn bitxor(mut self, rhs: &'static str) -> Self::Output {
-        match &mut self {
-            Selector::Semantic(semantic) => {
-                semantic.language = Some(proto::semantic::Identifier::new(rhs).unwrap());
-            }
-            Selector::TextMate(_) => panic!("cannot add set language of TextMate selector"),
-        }
-
-        self
-    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -416,7 +393,7 @@ mod tests {
     fn add_semantic_selector_with_modifiers() {
         let mut t = ThemeBuilder::default();
 
-        t.a([s("parameter"), s("variable") & "declaration" & "static", s("function")], 0xD0AAFC);
+        t.a([s("parameter"), s("variable.declaration.static"), s("function")], 0xD0AAFC);
 
         let mut rules = IndexMap::new();
 
@@ -570,7 +547,7 @@ mod tests {
     fn font_style() {
         let mut t = ThemeBuilder::default();
 
-        t.a([tm("markup.underline"), s('*') & "mutable"], FontStyle::Underline);
+        t.a([tm("markup.underline"), s("*.mutable")], FontStyle::Underline);
 
         let mut rules = IndexMap::new();
 
@@ -615,7 +592,7 @@ mod tests {
     fn semantic_language() {
         let mut t = ThemeBuilder::default();
 
-        t.a([s("variable") & "constant" ^ "rust"], 0xFF0000);
+        t.a([s("variable.constant:rust")], 0xFF0000);
 
         let mut rules = IndexMap::new();
 
