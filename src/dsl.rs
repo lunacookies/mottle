@@ -1,7 +1,7 @@
 use crate::proto;
 use indexmap::IndexMap;
 use std::borrow::Cow;
-use std::ops::{BitAnd, BitOr, BitXor};
+use std::ops::{BitAnd, BitXor};
 
 #[derive(Debug, Default)]
 pub struct ThemeBuilder {
@@ -11,17 +11,12 @@ pub struct ThemeBuilder {
 }
 
 impl ThemeBuilder {
-    pub fn a(
-        &mut self,
-        selectors: impl Into<SemanticOrTextMateSelectors>,
-        style: impl Into<Style>,
-    ) {
+    pub fn a(&mut self, selectors: impl IntoIterator<Item = Selector>, style: impl Into<Style>) {
         let mut textmate_scopes = Vec::new();
         let mut semantic_selectors = Vec::new();
-        let selectors = selectors.into();
         let style = style.into();
 
-        for selector in selectors.0 {
+        for selector in selectors {
             match selector {
                 Selector::TextMate(scope) => textmate_scopes.push(scope),
                 Selector::Semantic(selector) => semantic_selectors.push(selector),
@@ -85,11 +80,11 @@ impl ThemeBuilder {
         }
     }
 
-    pub fn w(&mut self, selector: WorkbenchSelectors, color: u32) {
-        let [r, g, b, a] = color.to_be_bytes();
+    pub fn w<'a>(&mut self, selector: impl IntoIterator<Item = &'a str>, color: impl Into<Color>) {
+        let Color(color) = color.into();
 
-        for selector in selector.0 {
-            self.workbench_rules.insert(selector.into(), proto::Color { r, g, b, a });
+        for selector in selector {
+            self.workbench_rules.insert(Cow::Owned(selector.to_string()), color);
         }
     }
 
@@ -103,20 +98,16 @@ impl ThemeBuilder {
     }
 }
 
-pub fn tm(scope: impl Into<String>) -> SemanticOrTextMateSelectors {
-    SemanticOrTextMateSelectors(vec![Selector::TextMate(scope.into())])
+pub fn tm(scope: impl Into<String>) -> Selector {
+    Selector::TextMate(scope.into())
 }
 
-pub fn s(token_kind: impl IntoTokenKind) -> SemanticOrTextMateSelectors {
-    SemanticOrTextMateSelectors(vec![Selector::Semantic(proto::semantic::Selector {
+pub fn s(token_kind: impl IntoTokenKind) -> Selector {
+    Selector::Semantic(proto::semantic::Selector {
         kind: token_kind.into_token_kind(),
         modifiers: Vec::new(),
         language: None,
-    })])
-}
-
-pub fn w(selector: impl Into<String>) -> WorkbenchSelectors {
-    WorkbenchSelectors(vec![selector.into()])
+    })
 }
 
 pub trait IntoTokenKind {
@@ -143,64 +134,37 @@ impl IntoTokenKind for char {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct SemanticOrTextMateSelectors(Vec<Selector>);
-
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Selector {
     TextMate(String),
     Semantic(proto::semantic::Selector),
 }
 
-impl BitOr for SemanticOrTextMateSelectors {
-    type Output = Self;
-
-    fn bitor(mut self, mut rhs: Self) -> Self::Output {
-        self.0.append(&mut rhs.0);
-        self
-    }
-}
-
-impl BitAnd<&'static str> for SemanticOrTextMateSelectors {
+impl BitAnd<&'static str> for Selector {
     type Output = Self;
 
     fn bitand(mut self, rhs: &'static str) -> Self::Output {
-        for selector in &mut self.0 {
-            match selector {
-                Selector::Semantic(semantic) => {
-                    semantic.modifiers.push(proto::semantic::Identifier::new(rhs).unwrap());
-                }
-                Selector::TextMate(_) => panic!("cannot add a modifier to TextMate selector"),
+        match &mut self {
+            Selector::Semantic(semantic) => {
+                semantic.modifiers.push(proto::semantic::Identifier::new(rhs).unwrap());
             }
+            Selector::TextMate(_) => panic!("cannot add a modifier to TextMate selector"),
         }
 
         self
     }
 }
 
-impl BitXor<&'static str> for SemanticOrTextMateSelectors {
+impl BitXor<&'static str> for Selector {
     type Output = Self;
 
     fn bitxor(mut self, rhs: &'static str) -> Self::Output {
-        for selector in &mut self.0 {
-            match selector {
-                Selector::Semantic(semantic) => {
-                    semantic.language = Some(proto::semantic::Identifier::new(rhs).unwrap());
-                }
-                Selector::TextMate(_) => panic!("cannot add set language of TextMate selector"),
+        match &mut self {
+            Selector::Semantic(semantic) => {
+                semantic.language = Some(proto::semantic::Identifier::new(rhs).unwrap());
             }
+            Selector::TextMate(_) => panic!("cannot add set language of TextMate selector"),
         }
 
-        self
-    }
-}
-
-pub struct WorkbenchSelectors(Vec<String>);
-
-impl BitOr for WorkbenchSelectors {
-    type Output = Self;
-
-    fn bitor(mut self, mut rhs: Self) -> Self::Output {
-        self.0.append(&mut rhs.0);
         self
     }
 }
@@ -211,10 +175,13 @@ pub struct Style {
     font_style: Option<FontStyle>,
 }
 
-impl From<u32> for Style {
-    fn from(rgba: u32) -> Self {
-        let [r, g, b, a] = rgba.to_be_bytes();
-        Self { foreground: Some(proto::Color { r, g, b, a }), font_style: None }
+impl<C> From<C> for Style
+where
+    C: Into<Color>,
+{
+    fn from(c: C) -> Self {
+        let Color(c) = c.into();
+        Self { foreground: Some(c), font_style: None }
     }
 }
 
@@ -224,11 +191,49 @@ impl From<FontStyle> for Style {
     }
 }
 
-impl From<(u32, FontStyle)> for Style {
-    fn from((rgba, font_style): (u32, FontStyle)) -> Self {
-        let [r, g, b, a] = rgba.to_be_bytes();
-        Self { foreground: Some(proto::Color { r, g, b, a }), font_style: Some(font_style) }
+impl<C> From<(C, FontStyle)> for Style
+where
+    C: Into<Color>,
+{
+    fn from((c, font_style): (C, FontStyle)) -> Self {
+        let Color(c) = c.into();
+        Self { foreground: Some(c), font_style: Some(font_style) }
     }
+}
+
+pub struct Color(proto::Color);
+
+impl From<u32> for Color {
+    fn from(rgb: u32) -> Self {
+        let (r, g, b) = rgb_from_u32(rgb);
+        Self(proto::Color { r, g, b, a: 0xFF })
+    }
+}
+
+impl From<(u32, u8)> for Color {
+    fn from((rgb, a): (u32, u8)) -> Self {
+        let (r, g, b) = rgb_from_u32(rgb);
+        Self(proto::Color { r, g, b, a })
+    }
+}
+
+impl From<(u8, u8, u8)> for Color {
+    fn from((r, g, b): (u8, u8, u8)) -> Self {
+        Self(proto::Color { r, g, b, a: 0xFF })
+    }
+}
+
+impl From<((u8, u8, u8), u8)> for Color {
+    fn from(((r, g, b), a): ((u8, u8, u8), u8)) -> Self {
+        Self(proto::Color { r, g, b, a })
+    }
+}
+
+fn rgb_from_u32(rgb: u32) -> (u8, u8, u8) {
+    let [hi, r, g, b] = rgb.to_be_bytes();
+    assert_eq!(hi, 0);
+
+    (r, g, b)
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -263,7 +268,7 @@ mod tests {
     fn add_single_textmate_scope_with_rgba_u32() {
         let mut t = ThemeBuilder::default();
 
-        t.a(tm("keyword.operator"), 0xF92672FF);
+        t.a([tm("keyword.operator")], 0xF92672);
 
         assert_eq!(
             t.build("My cool theme"),
@@ -286,7 +291,7 @@ mod tests {
     fn add_multiple_textmate_scopes_with_rgba_u32() {
         let mut t = ThemeBuilder::default();
 
-        t.a(tm("keyword.operator") | tm("punctuation") | tm("keyword.other"), 0xF92672FF);
+        t.a([tm("keyword.operator"), tm("punctuation"), tm("keyword.other")], 0xF92672);
 
         assert_eq!(
             t.build("My cool theme"),
@@ -313,7 +318,7 @@ mod tests {
     fn add_single_semantic_selector_with_rgba_u32() {
         let mut t = ThemeBuilder::default();
 
-        t.a(s("string"), 0xD49E9EFF);
+        t.a([s("string")], 0xD49E9E);
 
         let mut rules = IndexMap::new();
 
@@ -350,7 +355,7 @@ mod tests {
     fn add_multiple_semantic_selectors_with_rgba_u32() {
         let mut t = ThemeBuilder::default();
 
-        t.a(s("number") | s("boolean") | s("enumMember"), 0xB5CEA8FF);
+        t.a([s("number"), s("boolean"), s("enumMember")], 0xB5CEA8);
 
         let mut rules = IndexMap::new();
 
@@ -411,7 +416,7 @@ mod tests {
     fn add_semantic_selector_with_modifiers() {
         let mut t = ThemeBuilder::default();
 
-        t.a(s("parameter") | s("variable") & "declaration" & "static" | s("function"), 0xD0AAFCFF);
+        t.a([s("parameter"), s("variable") & "declaration" & "static", s("function")], 0xD0AAFC);
 
         let mut rules = IndexMap::new();
 
@@ -475,7 +480,7 @@ mod tests {
     fn add_semantic_and_textmate_selectors() {
         let mut t = ThemeBuilder::default();
 
-        t.a(s("variable") | tm("variable"), 0xFFFFFFFF);
+        t.a([s("variable"), tm("variable")], 0xFFFFFF);
 
         let mut rules = IndexMap::new();
 
@@ -518,7 +523,7 @@ mod tests {
     fn rgba_u32_and_font_style() {
         let mut t = ThemeBuilder::default();
 
-        t.a(tm("keyword") | s("keyword"), (0xEADFAFFF, FontStyle::Bold));
+        t.a([tm("keyword"), s("keyword")], (0xEADFAF, FontStyle::Bold));
 
         let mut rules = IndexMap::new();
 
@@ -565,7 +570,7 @@ mod tests {
     fn font_style() {
         let mut t = ThemeBuilder::default();
 
-        t.a(tm("markup.underline") | s('*') & "mutable", FontStyle::Underline);
+        t.a([tm("markup.underline"), s('*') & "mutable"], FontStyle::Underline);
 
         let mut rules = IndexMap::new();
 
@@ -610,7 +615,7 @@ mod tests {
     fn semantic_language() {
         let mut t = ThemeBuilder::default();
 
-        t.a(s("variable") & "constant" ^ "rust", 0xFF0000FF);
+        t.a([s("variable") & "constant" ^ "rust"], 0xFF0000);
 
         let mut rules = IndexMap::new();
 
@@ -647,8 +652,8 @@ mod tests {
     fn workbench_rules() {
         let mut t = ThemeBuilder::default();
 
-        t.w(w("editor.background"), 0x111111FF);
-        t.w(w("editor.foreground") | w("foreground"), 0xBCBCBCFF);
+        t.w(["editor.background"], 0x111111);
+        t.w(["editor.foreground", "foreground"], 0xBCBCBC);
 
         let mut workbench_rules = IndexMap::new();
         workbench_rules.insert(
