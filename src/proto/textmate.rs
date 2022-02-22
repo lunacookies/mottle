@@ -29,14 +29,20 @@ impl Serialize for RuleSettings {
         match self.font_style {
             FontStyle::Inherit => {
                 let mut strukt = serializer.serialize_struct("Settings", 1)?;
-                strukt.serialize_field("foreground", &self.foreground)?;
+
+                if let Some(foreground) = self.foreground {
+                    strukt.serialize_field("foreground", &foreground)?;
+                }
+
                 strukt.end()
             }
 
             FontStyle::Set { bold, italic, underline } => {
                 let mut strukt = serializer.serialize_struct("Settings", 2)?;
 
-                strukt.serialize_field("foreground", &self.foreground)?;
+                if let Some(foreground) = self.foreground {
+                    strukt.serialize_field("foreground", &foreground)?;
+                }
 
                 let mut s = String::new();
 

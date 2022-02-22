@@ -100,7 +100,10 @@ impl Serialize for Style {
         S: serde::Serializer,
     {
         let mut strukt = serializer.serialize_struct("Style", 1)?;
-        strukt.serialize_field("foreground", &self.foreground)?;
+
+        if let Some(foreground) = self.foreground {
+            strukt.serialize_field("foreground", &foreground)?;
+        }
 
         match self.font_style.bold {
             FontStyleSetting::True => strukt.serialize_field("bold", &true)?,

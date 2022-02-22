@@ -135,17 +135,30 @@ mod tests {
         check(
             Theme {
                 name: "My cool theme".to_string(),
-                textmate_rules: vec![textmate::Rule {
-                    scope: vec!["storage".to_string()],
-                    settings: textmate::RuleSettings {
-                        foreground: Some(Color { r: 0, g: 0, b: 0, a: 255 }),
-                        font_style: textmate::FontStyle::Set {
-                            bold: true,
-                            italic: true,
-                            underline: false,
+                textmate_rules: vec![
+                    textmate::Rule {
+                        scope: vec!["storage".to_string()],
+                        settings: textmate::RuleSettings {
+                            foreground: Some(Color { r: 0, g: 0, b: 0, a: 255 }),
+                            font_style: textmate::FontStyle::Set {
+                                bold: true,
+                                italic: true,
+                                underline: false,
+                            },
                         },
                     },
-                }],
+                    textmate::Rule {
+                        scope: vec!["entity".to_string()],
+                        settings: textmate::RuleSettings {
+                            foreground: None,
+                            font_style: textmate::FontStyle::Set {
+                                bold: false,
+                                italic: true,
+                                underline: false,
+                            },
+                        },
+                    },
+                ],
                 semantic_highlighting: semantic::Highlighting::Off,
                 workbench_rules: IndexMap::new(),
             },
@@ -161,6 +174,14 @@ mod tests {
                             "settings": {
                                 "foreground": "#000000",
                                 "fontStyle": "italic bold"
+                            }
+                        },
+                        {
+                            "scope": [
+                                "entity"
+                            ],
+                            "settings": {
+                                "fontStyle": "italic"
                             }
                         }
                     ],
@@ -187,6 +208,22 @@ mod tests {
                     bold: semantic::FontStyleSetting::True,
                     italic: semantic::FontStyleSetting::Inherit,
                     underline: semantic::FontStyleSetting::Inherit,
+                },
+            },
+        );
+
+        rules.insert(
+            semantic::Selector {
+                kind: semantic::TokenKind::Wildcard,
+                modifiers: vec![semantic::Identifier::new("mutable").unwrap()],
+                language: None,
+            },
+            semantic::Style {
+                foreground: None,
+                font_style: semantic::FontStyle {
+                    bold: semantic::FontStyleSetting::Inherit,
+                    italic: semantic::FontStyleSetting::Inherit,
+                    underline: semantic::FontStyleSetting::True,
                 },
             },
         );
@@ -243,6 +280,9 @@ mod tests {
                         "*.unsafe": {
                             "foreground": "#FF0000",
                             "bold": true
+                        },
+                        "*.mutable": {
+                            "underline": true
                         },
                         "variable:rust": {
                             "foreground": "#E0E0C9"
