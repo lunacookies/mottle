@@ -39,11 +39,20 @@ impl ThemeBuilder {
                         underline: proto::semantic::FontStyleSetting::Inherit,
                     };
 
-                    *match font_style {
-                        FontStyle::Bold => &mut s.bold,
-                        FontStyle::Italic => &mut s.italic,
-                        FontStyle::Underline => &mut s.underline,
-                    } = proto::semantic::FontStyleSetting::True;
+                    match font_style {
+                        FontStyle::Bold => s.bold = proto::semantic::FontStyleSetting::True,
+                        FontStyle::Italic => s.italic = proto::semantic::FontStyleSetting::True,
+                        FontStyle::Underline => {
+                            s.underline = proto::semantic::FontStyleSetting::True
+                        }
+                        FontStyle::Clear => {
+                            s = proto::semantic::FontStyle {
+                                bold: proto::semantic::FontStyleSetting::False,
+                                italic: proto::semantic::FontStyleSetting::False,
+                                underline: proto::semantic::FontStyleSetting::False,
+                            }
+                        }
+                    }
 
                     s
                 }
@@ -64,11 +73,12 @@ impl ThemeBuilder {
                 Some(font_style) => {
                     let mut s = (false, false, false);
 
-                    *match font_style {
-                        FontStyle::Bold => &mut s.0,
-                        FontStyle::Italic => &mut s.1,
-                        FontStyle::Underline => &mut s.2,
-                    } = true;
+                    match font_style {
+                        FontStyle::Bold => s.0 = true,
+                        FontStyle::Italic => s.1 = true,
+                        FontStyle::Underline => s.2 = true,
+                        FontStyle::Clear => {}
+                    }
 
                     proto::textmate::FontStyle::Set { bold: s.0, italic: s.1, underline: s.2 }
                 }
@@ -218,6 +228,7 @@ pub enum FontStyle {
     Bold,
     Italic,
     Underline,
+    Clear,
 }
 
 #[cfg(test)]
