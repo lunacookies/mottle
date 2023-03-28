@@ -46,6 +46,16 @@ pub enum FontStyleSetting {
     Inherit,
 }
 
+impl From<Option<bool>> for FontStyleSetting {
+    fn from(value: Option<bool>) -> Self {
+        match value {
+            Some(true) => FontStyleSetting::True,
+            Some(false) => FontStyleSetting::False,
+            None => FontStyleSetting::Inherit,
+        }
+    }
+}
+
 impl Serialize for Highlighting {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where

@@ -52,6 +52,11 @@ impl ThemeBuilder {
                                 underline: proto::semantic::FontStyleSetting::False,
                             }
                         }
+                        FontStyle::Multi { bold, italic, underline } => {
+                            s.bold = bold.into();
+                            s.italic = italic.into();
+                            s.underline = underline.into();
+                        }
                     }
 
                     s
@@ -78,6 +83,9 @@ impl ThemeBuilder {
                         FontStyle::Italic => s.1 = true,
                         FontStyle::Underline => s.2 = true,
                         FontStyle::Clear => {}
+                        FontStyle::Multi { bold, italic, underline } => {
+                            s = (bold == Some(true), italic == Some(true), underline == Some(true))
+                        }
                     }
 
                     proto::textmate::FontStyle::Set { bold: s.0, italic: s.1, underline: s.2 }
@@ -229,6 +237,7 @@ pub enum FontStyle {
     Italic,
     Underline,
     Clear,
+    Multi { bold: Option<bool>, italic: Option<bool>, underline: Option<bool> },
 }
 
 #[cfg(test)]
@@ -590,6 +599,54 @@ mod tests {
                             bold: false,
                             italic: false,
                             underline: true
+                        }
+                    }
+                }],
+                semantic_highlighting: proto::semantic::Highlighting::On { rules },
+                workbench_rules: IndexMap::new(),
+            }
+        );
+    }
+
+    #[test]
+    fn font_multi_style() {
+        let mut t = ThemeBuilder::default();
+
+        t.a(
+            [tm("markup.underline"), s("*.mutable")],
+            FontStyle::Multi { bold: Some(true), italic: None, underline: Some(false) },
+        );
+
+        let mut rules = IndexMap::new();
+
+        rules.insert(
+            proto::semantic::Selector {
+                kind: proto::semantic::TokenKind::Wildcard,
+                modifiers: vec![proto::semantic::Identifier::new("mutable").unwrap()],
+                language: None,
+            },
+            proto::semantic::Style {
+                foreground: None,
+                font_style: proto::semantic::FontStyle {
+                    bold: proto::semantic::FontStyleSetting::True,
+                    italic: proto::semantic::FontStyleSetting::Inherit,
+                    underline: proto::semantic::FontStyleSetting::False,
+                },
+            },
+        );
+
+        assert_eq!(
+            t.build("My cool theme"),
+            proto::Theme {
+                name: "My cool theme".to_string(),
+                textmate_rules: vec![proto::textmate::Rule {
+                    scope: vec!["markup.underline".to_string()],
+                    settings: proto::textmate::RuleSettings {
+                        foreground: None,
+                        font_style: proto::textmate::FontStyle::Set {
+                            bold: true,
+                            italic: false,
+                            underline: false
                         }
                     }
                 }],
